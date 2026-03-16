@@ -1,28 +1,46 @@
--- Potassium UI Library
--- Professional Animated GUI
+```lua
+--// Potassium Style GUI Library
+--// Rounded + Animated
 
 local UILib = {}
 UILib.__index = UILib
 
+-- Services
 local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
+local UIS = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 
 local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 
-UILib.Flags = {}
-
--- Default Theme
+-- Theme
 UILib.Theme = {
-    Background = Color3.fromRGB(25,25,25),
-    Tab = Color3.fromRGB(35,35,35),
-    Accent = Color3.fromRGB(0,170,255),
-    Text = Color3.fromRGB(255,255,255)
+    Background = Color3.fromRGB(20,20,20),
+    Section = Color3.fromRGB(35,35,35),
+    Item = Color3.fromRGB(40,40,40),
+    Accent = Color3.fromRGB(120,190,255),
+    Text = Color3.fromRGB(255,255,255),
+    Stroke = Color3.fromRGB(60,60,60)
 }
 
+-- Tween helper
 local function Tween(obj,time,props)
     TweenService:Create(obj,TweenInfo.new(time,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),props):Play()
+end
+
+-- Round helper
+local function Round(obj,radius)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0,radius or 8)
+    corner.Parent = obj
+end
+
+-- Stroke helper
+local function Stroke(obj)
+    local s = Instance.new("UIStroke")
+    s.Color = UILib.Theme.Stroke
+    s.Thickness = 1
+    s.Parent = obj
 end
 
 function UILib:CreateWindow(data)
@@ -32,36 +50,38 @@ function UILib:CreateWindow(data)
     ScreenGui.Parent = PlayerGui
 
     local Main = Instance.new("Frame")
-    Main.Size = UDim2.new(0,600,0,400)
-    Main.Position = UDim2.new(0.5,-300,0.5,-200)
+    Main.Size = UDim2.new(0,640,0,420)
+    Main.Position = UDim2.new(0.5,-320,0.5,-210)
     Main.BackgroundColor3 = UILib.Theme.Background
     Main.Parent = ScreenGui
-
     Main.Active = true
 
+    Round(Main,12)
+    Stroke(Main)
+
     -- Dragging
-    local dragging = false
+    local dragging=false
     local dragStart
     local startPos
 
     Main.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = Main.Position
+            dragging=true
+            dragStart=input.Position
+            startPos=Main.Position
+        end
+    end)
+
+    UIS.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta=input.Position-dragStart
+            Main.Position=startPos+UDim2.new(0,delta.X,0,delta.Y)
         end
     end)
 
     Main.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local delta = input.Position - dragStart
-            Main.Position = startPos + UDim2.new(0,delta.X,0,delta.Y)
+            dragging=false
         end
     end)
 
@@ -71,19 +91,26 @@ function UILib:CreateWindow(data)
     Title.BackgroundTransparency = 1
     Title.Text = data.Name or "Potassium UI"
     Title.TextColor3 = UILib.Theme.Text
-    Title.TextScaled = true
+    Title.TextSize = 18
+    Title.Font = Enum.Font.GothamBold
     Title.Parent = Main
 
-    -- Tabs container
-    local TabButtons = Instance.new("Frame")
-    TabButtons.Size = UDim2.new(0,140,1,-40)
-    TabButtons.Position = UDim2.new(0,0,0,40)
-    TabButtons.BackgroundColor3 = UILib.Theme.Tab
-    TabButtons.Parent = Main
+    -- Tabs
+    local Tabs = Instance.new("Frame")
+    Tabs.Size = UDim2.new(0,150,1,-40)
+    Tabs.Position = UDim2.new(0,0,0,40)
+    Tabs.BackgroundColor3 = UILib.Theme.Section
+    Tabs.Parent = Main
 
+    Round(Tabs,10)
+
+    local TabLayout = Instance.new("UIListLayout")
+    TabLayout.Parent = Tabs
+
+    -- Pages
     local Pages = Instance.new("Frame")
-    Pages.Size = UDim2.new(1,-140,1,-40)
-    Pages.Position = UDim2.new(0,140,0,40)
+    Pages.Size = UDim2.new(1,-150,1,-40)
+    Pages.Position = UDim2.new(0,150,0,40)
     Pages.BackgroundTransparency = 1
     Pages.Parent = Main
 
@@ -91,49 +118,90 @@ function UILib:CreateWindow(data)
 
     function Window:CreateTab(tabData)
 
-        local Button = Instance.new("TextButton")
-        Button.Size = UDim2.new(1,0,0,40)
-        Button.BackgroundColor3 = UILib.Theme.Tab
-        Button.Text = tabData.Name
-        Button.TextColor3 = UILib.Theme.Text
-        Button.Parent = TabButtons
+        local TabButton = Instance.new("TextButton")
+        TabButton.Size = UDim2.new(1,0,0,40)
+        TabButton.BackgroundColor3 = UILib.Theme.Item
+        TabButton.TextColor3 = UILib.Theme.Text
+        TabButton.Text = tabData.Name
+        TabButton.Font = Enum.Font.Gotham
+        TabButton.TextSize = 14
+        TabButton.Parent = Tabs
+
+        Round(TabButton,6)
 
         local Page = Instance.new("ScrollingFrame")
         Page.Size = UDim2.new(1,0,1,0)
-        Page.Visible = false
-        Page.Parent = Pages
+        Page.Visible=false
+        Page.BackgroundTransparency=1
+        Page.Parent=Pages
 
-        Button.MouseButton1Click:Connect(function()
+        local Layout = Instance.new("UIListLayout")
+        Layout.Padding = UDim.new(0,6)
+        Layout.Parent = Page
+
+        TabButton.MouseButton1Click:Connect(function()
 
             for _,v in pairs(Pages:GetChildren()) do
                 if v:IsA("ScrollingFrame") then
-                    v.Visible = false
+                    v.Visible=false
                 end
             end
 
-            Page.Visible = true
-            Page.Position = UDim2.new(1,0,0,0)
+            Page.Visible=true
+            Page.Position=UDim2.new(1,0,0,0)
 
-            Tween(Page,0.3,{Position = UDim2.new(0,0,0,0)})
+            Tween(Page,.25,{Position=UDim2.new(0,0,0,0)})
 
         end)
 
         local Tab = {}
 
+        function Tab:AddSection(name)
+
+            local Section = Instance.new("Frame")
+            Section.Size = UDim2.new(1,-10,0,40)
+            Section.BackgroundColor3 = UILib.Theme.Section
+            Section.Parent = Page
+
+            Round(Section,8)
+            Stroke(Section)
+
+            local Label = Instance.new("TextLabel")
+            Label.BackgroundTransparency = 1
+            Label.Size = UDim2.new(1,0,1,0)
+            Label.Text = name
+            Label.TextColor3 = UILib.Theme.Text
+            Label.Font = Enum.Font.GothamBold
+            Label.TextSize = 14
+            Label.Parent = Section
+
+        end
+
         function Tab:AddButton(data)
 
             local Button = Instance.new("TextButton")
-            Button.Size = UDim2.new(1,-10,0,35)
-            Button.Position = UDim2.new(0,5,0,0)
-            Button.BackgroundColor3 = UILib.Theme.Tab
-            Button.Text = data.Name
+            Button.Size = UDim2.new(1,-10,0,36)
+            Button.BackgroundColor3 = UILib.Theme.Item
             Button.TextColor3 = UILib.Theme.Text
+            Button.Text = data.Name
+            Button.Font = Enum.Font.Gotham
+            Button.TextSize = 14
             Button.Parent = Page
 
+            Round(Button,6)
+
+            Button.MouseEnter:Connect(function()
+                Tween(Button,.15,{BackgroundColor3=Color3.fromRGB(55,55,55)})
+            end)
+
+            Button.MouseLeave:Connect(function()
+                Tween(Button,.15,{BackgroundColor3=UILib.Theme.Item})
+            end)
+
             Button.MouseButton1Click:Connect(function()
-                Tween(Button,0.1,{BackgroundColor3 = UILib.Theme.Accent})
+                Tween(Button,.1,{BackgroundColor3=UILib.Theme.Accent})
                 task.wait(.1)
-                Tween(Button,0.1,{BackgroundColor3 = UILib.Theme.Tab})
+                Tween(Button,.1,{BackgroundColor3=UILib.Theme.Item})
 
                 if data.Callback then
                     data.Callback()
@@ -144,84 +212,71 @@ function UILib:CreateWindow(data)
 
         function Tab:AddToggle(data)
 
-            local Toggle = Instance.new("TextButton")
-            Toggle.Size = UDim2.new(1,-10,0,35)
-            Toggle.BackgroundColor3 = UILib.Theme.Tab
-            Toggle.Text = data.Name
-            Toggle.TextColor3 = UILib.Theme.Text
-            Toggle.Parent = Page
+            local Frame = Instance.new("Frame")
+            Frame.Size = UDim2.new(1,-10,0,36)
+            Frame.BackgroundColor3 = UILib.Theme.Item
+            Frame.Parent = Page
 
-            local Value = data.Default or false
+            Round(Frame,6)
 
-            Toggle.MouseButton1Click:Connect(function()
+            local Text = Instance.new("TextLabel")
+            Text.BackgroundTransparency=1
+            Text.Position=UDim2.new(0,10,0,0)
+            Text.Size=UDim2.new(1,-40,1,0)
+            Text.Text=data.Name
+            Text.TextColor3=UILib.Theme.Text
+            Text.Font=Enum.Font.Gotham
+            Text.TextSize=14
+            Text.TextXAlignment=Enum.TextXAlignment.Left
+            Text.Parent=Frame
 
-                Value = not Value
+            local Box = Instance.new("Frame")
+            Box.Size=UDim2.new(0,22,0,22)
+            Box.Position=UDim2.new(1,-30,.5,-11)
+            Box.BackgroundColor3=Color3.fromRGB(70,70,70)
+            Box.Parent=Frame
 
-                if Value then
-                    Tween(Toggle,0.2,{BackgroundColor3 = UILib.Theme.Accent})
-                else
-                    Tween(Toggle,0.2,{BackgroundColor3 = UILib.Theme.Tab})
+            Round(Box,4)
+
+            local Value=data.Default or false
+
+            Frame.InputBegan:Connect(function(i)
+                if i.UserInputType==Enum.UserInputType.MouseButton1 then
+
+                    Value=not Value
+
+                    if Value then
+                        Tween(Box,.2,{BackgroundColor3=UILib.Theme.Accent})
+                    else
+                        Tween(Box,.2,{BackgroundColor3=Color3.fromRGB(70,70,70)})
+                    end
+
+                    if data.Callback then
+                        data.Callback(Value)
+                    end
+
                 end
-
-                if data.Flag then
-                    UILib.Flags[data.Flag] = Value
-                end
-
-                if data.Callback then
-                    data.Callback(Value)
-                end
-
             end)
 
         end
 
-        function Tab:AddSlider(data)
+        function Tab:AddTextbox(data)
 
-            local Slider = Instance.new("Frame")
-            Slider.Size = UDim2.new(1,-10,0,40)
-            Slider.BackgroundColor3 = UILib.Theme.Tab
-            Slider.Parent = Page
+            local Box = Instance.new("TextBox")
+            Box.Size = UDim2.new(1,-10,0,36)
+            Box.BackgroundColor3 = UILib.Theme.Item
+            Box.TextColor3 = UILib.Theme.Text
+            Box.PlaceholderText = data.Name
+            Box.Font = Enum.Font.Gotham
+            Box.TextSize = 14
+            Box.Parent = Page
 
-            local Fill = Instance.new("Frame")
-            Fill.Size = UDim2.new(0,0,1,0)
-            Fill.BackgroundColor3 = UILib.Theme.Accent
-            Fill.Parent = Slider
+            Round(Box,6)
 
-            local dragging = false
-
-            Slider.InputBegan:Connect(function(i)
-                if i.UserInputType == Enum.UserInputType.MouseButton1 then
-                    dragging = true
+            Box.FocusLost:Connect(function()
+                if data.Callback then
+                    data.Callback(Box.Text)
                 end
-            end)
-
-            Slider.InputEnded:Connect(function(i)
-                if i.UserInputType == Enum.UserInputType.MouseButton1 then
-                    dragging = false
-                end
-            end)
-
-            UserInputService.InputChanged:Connect(function(i)
-
-                if dragging then
-
-                    local size = math.clamp(
-                        (i.Position.X - Slider.AbsolutePosition.X) / Slider.AbsoluteSize.X,
-                        0,1
-                    )
-
-                    Fill.Size = UDim2.new(size,0,1,0)
-
-                    local value = math.floor(
-                        data.Min + (data.Max-data.Min)*size
-                    )
-
-                    if data.Callback then
-                        data.Callback(value)
-                    end
-
-                end
-
             end)
 
         end
@@ -234,23 +289,36 @@ end
 
 function UILib:Notify(data)
 
-    local Notify = Instance.new("TextLabel")
-    Notify.Size = UDim2.new(0,250,0,60)
-    Notify.Position = UDim2.new(1,-260,1,-80)
-    Notify.BackgroundColor3 = UILib.Theme.Tab
-    Notify.Text = data.Title.." - "..data.Text
-    Notify.TextColor3 = UILib.Theme.Text
-    Notify.Parent = PlayerGui
+    local Frame = Instance.new("Frame")
+    Frame.Size = UDim2.new(0,260,0,60)
+    Frame.Position = UDim2.new(1,-270,1,-80)
+    Frame.BackgroundColor3 = UILib.Theme.Section
+    Frame.Parent = PlayerGui
 
-    Tween(Notify,0.3,{Position = UDim2.new(1,-260,1,-140)})
+    Round(Frame,8)
+    Stroke(Frame)
+
+    local Text = Instance.new("TextLabel")
+    Text.BackgroundTransparency=1
+    Text.Size=UDim2.new(1,-10,1,-10)
+    Text.Position=UDim2.new(0,5,0,5)
+    Text.Text=data.Title.." - "..data.Text
+    Text.TextColor3=UILib.Theme.Text
+    Text.Font=Enum.Font.Gotham
+    Text.TextWrapped=true
+    Text.TextSize=14
+    Text.Parent=Frame
+
+    Tween(Frame,.25,{Position=UDim2.new(1,-270,1,-140)})
 
     task.wait(data.Time or 3)
 
-    Tween(Notify,0.3,{Position = UDim2.new(1,0,1,-140)})
-    task.wait(.3)
+    Tween(Frame,.25,{Position=UDim2.new(1,0,1,-140)})
+    task.wait(.25)
 
-    Notify:Destroy()
+    Frame:Destroy()
 
 end
 
 return UILib
+```
